@@ -1,4 +1,4 @@
-﻿namespace CRUDEF.Models
+namespace CRUDEF.Models
 {
     public class InvoiceDetail
     {
@@ -7,8 +7,7 @@
         public int ProductId { get; set; }
         public int Quantity { get; set; }
         public decimal TotalPrice { get; set; }
-        // Navigation properties
-        public Invoice Invoice { get; set; }
-        public Product Product { get; set; }
+        public Invoice Invoice { get; set; } = null!;
+        public Product Product { get; set; } = null!;
     }
 }

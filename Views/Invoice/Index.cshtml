@@ -1,0 +1,60 @@
+@model IEnumerable<CRUDEF.Models.InvoiceListViewModel>
+
+@{
+    ViewData["Title"] = "Invoices";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Invoices</h1>
+    <a class="btn btn-primary" asp-action="AddInvoice">Create Invoice</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No invoices have been created yet.</div>
+}
+else
+{
+    <table class="table table-bordered align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Invoice No</th>
+                <th>Total Price</th>
+                <th>Product Items</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var invoice in Model)
+            {
+                <tr>
+                    <td>@invoice.InvoiceNo</td>
+                    <td>@invoice.TotalPrice.ToString("0.00")</td>
+                    <td>
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Line Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var detail in invoice.Details)
+                                {
+                                    <tr>
+                                        <td>@detail.ProductName</td>
+                                        <td class="text-end">@detail.UnitPrice.ToString("0.00")</td>
+                                        <td class="text-end">@detail.Quantity</td>
+                                        <td class="text-end">@detail.TotalPrice.ToString("0.00")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

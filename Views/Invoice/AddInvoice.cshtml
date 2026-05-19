@@ -1,0 +1,163 @@
+@model CRUDEF.Models.InvoiceCreateViewModel
+
+@{
+    ViewData["Title"] = "Create Invoice";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Create Invoice</h1>
+    <a class="btn btn-outline-secondary" asp-action="Index">Back to List</a>
+</div>
+
+@if (!Model.Products.Any())
+{
+    <div class="alert alert-warning">
+        Please create products before adding an invoice.
+        <a asp-controller="Products" asp-action="Create">Create Product</a>
+    </div>
+}
+
+<form asp-action="AddInvoice" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label asp-for="InvoiceNo" class="form-label">Invoice No</label>
+            <input asp-for="InvoiceNo" class="form-control" />
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle" id="invoiceDetailsTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 40%;">Product</th>
+                    <th class="text-end">Unit Price</th>
+                    <th style="width: 15%;">Quantity</th>
+                    <th class="text-end">Line Total</th>
+                    <th style="width: 90px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Details.Count; i++)
+                {
+                    <tr class="detail-row">
+                        <td>
+                            <select class="form-select product-select" asp-for="Details[i].ProductId">
+                                <option value="" data-price="0">Select Product</option>
+                                @foreach (var product in Model.Products)
+                                {
+                                    <option value="@product.Id" data-price="@product.Price" selected="@(Model.Details[i].ProductId == product.Id)">
+                                        @product.Name
+                                    </option>
+                                }
+                            </select>
+                        </td>
+                        <td class="text-end unit-price">0.00</td>
+                        <td>
+                            <input class="form-control quantity-input" asp-for="Details[i].Quantity" min="1" type="number" />
+                        </td>
+                        <td class="text-end line-total">0.00</td>
+                        <td>
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-row">Remove</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" class="text-end fw-bold">Invoice Total</td>
+                    <td class="text-end fw-bold" id="invoiceTotal">0.00</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary" id="addRow" @(Model.Products.Any() ? null : "disabled")>Add Product Row</button>
+        <button type="submit" class="btn btn-primary" @(Model.Products.Any() ? null : "disabled")>Save</button>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        const productOptions = `@Html.Raw(string.Join("", Model.Products.Select(product => $"<option value=\"{product.Id}\" data-price=\"{product.Price}\">{System.Net.WebUtility.HtmlEncode(product.Name)}</option>")))`;
+        const tableBody = document.querySelector("#invoiceDetailsTable tbody");
+        const addRowButton = document.getElementById("addRow");
+        const invoiceTotal = document.getElementById("invoiceTotal");
+
+        function toMoney(value) {
+            return Number(value || 0).toFixed(2);
+        }
+
+        function updateRow(row) {
+            const selectedOption = row.querySelector(".product-select").selectedOptions[0];
+            const price = Number(selectedOption?.dataset.price || 0);
+            const quantity = Number(row.querySelector(".quantity-input").value || 0);
+            const total = price * quantity;
+
+            row.querySelector(".unit-price").textContent = toMoney(price);
+            row.querySelector(".line-total").textContent = toMoney(total);
+            updateInvoiceTotal();
+        }
+
+        function updateInvoiceTotal() {
+            const total = Array.from(document.querySelectorAll(".line-total"))
+                .reduce((sum, cell) => sum + Number(cell.textContent || 0), 0);
+
+            invoiceTotal.textContent = toMoney(total);
+        }
+
+        function reindexRows() {
+            document.querySelectorAll(".detail-row").forEach((row, index) => {
+                row.querySelector(".product-select").name = `Details[${index}].ProductId`;
+                row.querySelector(".product-select").id = `Details_${index}__ProductId`;
+                row.querySelector(".quantity-input").name = `Details[${index}].Quantity`;
+                row.querySelector(".quantity-input").id = `Details_${index}__Quantity`;
+            });
+        }
+
+        function bindRow(row) {
+            row.querySelector(".product-select").addEventListener("change", () => updateRow(row));
+            row.querySelector(".quantity-input").addEventListener("input", () => updateRow(row));
+            row.querySelector(".remove-row").addEventListener("click", () => {
+                if (document.querySelectorAll(".detail-row").length > 1) {
+                    row.remove();
+                    reindexRows();
+                    updateInvoiceTotal();
+                }
+            });
+            updateRow(row);
+        }
+
+        addRowButton?.addEventListener("click", () => {
+            const index = document.querySelectorAll(".detail-row").length;
+            const row = document.createElement("tr");
+            row.className = "detail-row";
+            row.innerHTML = `
+                <td>
+                    <select class="form-select product-select" name="Details[${index}].ProductId" id="Details_${index}__ProductId">
+                        <option value="" data-price="0">Select Product</option>
+                        ${productOptions}
+                    </select>
+                </td>
+                <td class="text-end unit-price">0.00</td>
+                <td>
+                    <input class="form-control quantity-input" name="Details[${index}].Quantity" id="Details_${index}__Quantity" min="1" type="number" value="1" />
+                </td>
+                <td class="text-end line-total">0.00</td>
+                <td>
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-row">Remove</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+            bindRow(row);
+        });
+
+        document.querySelectorAll(".detail-row").forEach(bindRow);
+    </script>
+}
